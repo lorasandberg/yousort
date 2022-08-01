@@ -1,5 +1,7 @@
 # YouSort - Sorting algorithm for subjective stuff
 
+Note: WIP!
+
 A silly tool that offers you a way to sort anything using any sorting criteria you want. What are the best and the worst songs in that one playlist? Which letter of the alphabet is most fun to write? Which fruit is the most inconvenient to peel and eat?
 
 Steps to use:

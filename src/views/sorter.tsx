@@ -1,6 +1,6 @@
 import React from 'react';
 import '../App.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Item } from '../components/item';
 
 function Sorter(props: any) {
@@ -9,8 +9,11 @@ function Sorter(props: any) {
   const [left, setLeft] = useState<number>(0);
   const [right, setRight] = useState<number>(1);
   const [matchups, setMatchups] = useState<any>({});
+  const [isFinished, setIsFinished] = useState<boolean>(false);
 
   const items = (): Item[] => props.getItems();
+
+  const resultCanvas = useRef<HTMLCanvasElement>(null);
 
   // Init sorter
   useEffect(() => {
@@ -18,6 +21,7 @@ function Sorter(props: any) {
     for (let i = 0; i < items().length; i++)
       newValues.push(0);
     setValues(newValues);
+    setMatchups({});
   }, [])
 
   // Whenever the sorting values change, fetch new items to compare.
@@ -28,16 +32,9 @@ function Sorter(props: any) {
     newItems();
   }, [values]);
 
-  // Whenever new items are picked to be compared, check if the comparison can be resolved with an existing matchup
   useEffect(() => {
-    let bigger = Math.max(left, right);
-    let smaller = Math.min(left, right);
-
-    if (matchups[smaller] != null && matchups[smaller][bigger] != null) {
-      let winner = matchups[smaller][bigger];
-      let loser = left == winner ? right : left;
-      choose(winner, loser); // Skipped with Matchup
-    }
+    // Check matchups but avoid increasing the stack size.
+    requestAnimationFrame(checkMatchups);
   }, [left, right]);
 
   // Update sorting values based on which item the player chose.
@@ -60,7 +57,7 @@ function Sorter(props: any) {
 
   // Get new items to compare
   function newItems() {
-    
+
     // First calculate how many items with different amount of vote values are there.
     let counts: number[] = [];
 
@@ -104,9 +101,24 @@ function Sorter(props: any) {
     setRight(toCompare[right]);
   }
 
+  // Whenever new items are picked to be compared, check if the comparison can be resolved with an existing matchup
+  const checkMatchups = () => {
+    let bigger = Math.max(left, right);
+    let smaller = Math.min(left, right);
+    console.log("Checking matchups: " + bigger + " vs. " + smaller);
+
+    if (matchups[smaller] != undefined && matchups[smaller][bigger] !== undefined) {
+      let winner = matchups[smaller][bigger];
+      let loser = left == winner ? right : left;
+      console.log("Skipping matchups: " + winner + " wins over " + loser);
+      choose(winner, loser);
+    }
+  }
+
   // Voting finished, show results.
   const finish = () => {
     console.log("Finished!");
+    setIsFinished(true);
 
     let list: any = [];
 
@@ -129,11 +141,83 @@ function Sorter(props: any) {
       output = output + "\n" + (i + 1) + ": " + items()[list[i][0]].name;
     }
     console.log(output);
+
+    setTimeout(() => {
+      generateResultImage(list);
+    }, 10);
+  }
+
+  // Create a fancy image to show the results and allow users to save them.
+  const generateResultImage = (list : number[][]) => {
+    const imageSize = 100;
+
+    const ctx = resultCanvas.current!.getContext("2d");
+    resultCanvas.current!.width = 800;
+    resultCanvas.current!.height = imageSize * list.length;
+
+    // Make image background black
+    ctx!.fillStyle = "#000";
+    ctx!.fillRect(0, 0, resultCanvas.current!.width, resultCanvas.current!.height);
+
+    ctx!.strokeStyle = "#000";
+
+    // For each list entry
+    for (let i = 0; i < list.length; i++) {
+
+      // Download the item image as file
+      let image = new Image();
+      image.onload = () => {
+
+        const y = imageSize * i + imageSize / 2;
+
+        // Draw the item image zoomed in an blurred in the background of the entry
+        ctx!.filter = "blur(4px)";
+        ctx!.drawImage(image, 0, image.height / 2 - 20, image.width, 40, imageSize, y - imageSize / 2, 800 - imageSize, imageSize);
+        ctx!.filter = "none";
+
+        // Draw black background for the text
+        ctx!.fillStyle = "#000";
+        ctx!.fillRect(0, y + 10, 800, 40);
+
+        ctx!.lineWidth = 3;
+        ctx!.fillStyle = "#fff";
+
+        // Draw the placing of the item in the list
+        ctx!.font = "32px Chewy, sans-serif";
+        ctx?.strokeText(ordinal_suffix_of(i + 1), imageSize + 20 + 600 - 2, y - 7); // Outside stroke
+        ctx!.font = "30px Chewy, sans-serif";
+        ctx?.fillText(ordinal_suffix_of(i + 1), imageSize + 20 + 600, y - 7);
+
+        // Draw the name of the item
+        ctx!.font = "25px Chewy, sans-serif";
+        ctx?.fillText(items()[list[i][0]].name, imageSize + 20, y + 25);
+
+        // Draw the item image next to the name
+        ctx?.drawImage(image, 0, imageSize * i, imageSize, imageSize);
+      }
+      image.src = items()[list[i][0]].image;
+    }
+  }
+
+  // ie. 1 -> "1st", 2 -> "2nd"
+  function ordinal_suffix_of(i: number): string {
+    var j = i % 10,
+      k = i % 100;
+    if (j == 1 && k != 11) {
+      return i + "st";
+    }
+    if (j == 2 && k != 12) {
+      return i + "nd";
+    }
+    if (j == 3 && k != 13) {
+      return i + "rd";
+    }
+    return i + "th";
   }
 
   return (
     <>
-      <div id="comparison">
+      {(!isFinished && <div id="comparison">
         <div id="itemLeft" onClick={() => choose(left, right)}>
           <h2>{items()[left]?.name}</h2>
           <img src={items()[left]?.image} />
@@ -144,7 +228,12 @@ function Sorter(props: any) {
           <img src={items()[right]?.image} />
           <p>{values[right]}</p>
         </div>
-      </div>
+      </div>)}
+      {(isFinished && <>
+        <canvas ref={resultCanvas}></canvas>
+        <button onClick={finish}>Finish</button>
+      </>
+      )}
     </>
   );
 }

@@ -1,3 +1,8 @@
+@font-face {
+  font-family: Chewy;
+  src: url("./RacingSansOne-Regular.ttf");
+}
+
 html,
 body {
   padding: 0;
@@ -13,6 +18,7 @@ h1, h2 {
   color: #fff;
   margin-bottom: 0;
   margin-top: 0;
+  font-family: Chewy;
 }
 
 
@@ -109,7 +115,6 @@ a {
 }
 .dropzone {
    width: 250px;
-   height: 180px;
    background-color: white;
    text-align: center;
    border: 3px dashed #d88200;

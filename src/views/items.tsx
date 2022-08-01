@@ -4,10 +4,14 @@ import '../App.css';
 import Dropzone from '../components/dropzone';
 import { Item, ItemElement } from '../components/item';
 import ItemForm from '../components/addItemForm';
+import { useState, useEffect } from 'react';
 
 
 // Parent view for adding, viewing and deleting items.
 function Items(props: any) {
+
+    const [a, setA] = useState<boolean>(true);
+    const [b, setB] = useState<boolean>(true);
 
     // Import items from a JSON file
     const handleSetFile = (file: Blob) => {
