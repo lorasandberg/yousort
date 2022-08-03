@@ -24,17 +24,12 @@ function App() {
   // Set of the items to be sorted
   const [items, setItems] = useState<Item[]>([]);
 
-  const mountTrack = useRef<boolean>(false);
-  const hasMounted = () => mountTrack.current;
-
   useEffect(() => {
-    let stored = localStorage.getItem("items");
+    let stored = localStorage.getItem("hasUsedBefore");
 
     // Get items from localStorage
     // If no items are set, the user is here for the first time so populate item list with instruction hints.
-    if (stored !== null && stored != "")
-      setItems(JSON.parse(stored));
-    else {
+    if (stored != "true") {
       setItems([{
         name: "This is a single item in the item list. You can add more items to the list and remove existing ones.",
         image: "",
@@ -57,17 +52,19 @@ function App() {
         id: -5
       }])
     }
-
-    return () => { mountTrack.current = false; }
   }, []);
 
   // Update localStorage whenever item change is detected, except during mount.
-  useEffect(() => {
-    if (hasMounted())
+  // Actually localstorage is too small for this.
+  /* useEffect(() => {
       updateLocalStorage();
-    mountTrack.current = true;
-
   }, [items]);
+
+  const updateLocalStorage = () => {
+    localStorage.setItem("items", JSON.stringify(items));
+  }*/
+
+  useEffect(() => { localStorage.setItem("hasUsedBefore", "true"); }, [items]);
 
   const startSort = () => {
     setView(Views.Sorter);
@@ -91,9 +88,6 @@ function App() {
     deleteItem: deleteItem
   }
 
-  const updateLocalStorage = () => {
-    localStorage.setItem("items", JSON.stringify(items));
-  }
 
   return (
     <>
