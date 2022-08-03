@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import './App.css';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Items from './views/items';
 import Sorter from './views/sorter';
 import { Item } from './components/item';
 import { start } from 'repl';
+import { SideAnimation } from './components/sideAnimation';
 
 enum Views { Sorter, Items }
 
@@ -23,16 +24,18 @@ function App() {
   // Set of the items to be sorted
   const [items, setItems] = useState<Item[]>([]);
 
-  // Delete item from the set
-  const deleteItem = (item: Item) => {
-    let tmpList = [...items];
-    tmpList.splice(tmpList.indexOf(item), 1);
-    setItems(tmpList);
-  }
+  const mountTrack = useRef<boolean>(false);
+  const hasMounted = () => mountTrack.current;
 
   useEffect(() => {
-    if (items.length == 0) {
-      setItems([...items, {
+    let stored = localStorage.getItem("items");
+
+    // Get items from localStorage
+    // If no items are set, the user is here for the first time so populate item list with instruction hints.
+    if (stored !== null && stored != "")
+      setItems(JSON.parse(stored));
+    else {
+      setItems([{
         name: "This is a single item in the item list. You can add more items to the list and remove existing ones.",
         image: "",
         id: -1
@@ -54,7 +57,17 @@ function App() {
         id: -5
       }])
     }
+
+    return () => { mountTrack.current = false; }
   }, []);
+
+  // Update localStorage whenever item change is detected, except during mount.
+  useEffect(() => {
+    if (hasMounted())
+      updateLocalStorage();
+    mountTrack.current = true;
+
+  }, [items]);
 
   const startSort = () => {
     setView(Views.Sorter);
@@ -64,11 +77,22 @@ function App() {
     setView(Views.Items);
   }
 
+  // Delete item from the set
+  const deleteItem = (item: Item) => {
+    let tmpList = [...items];
+    tmpList.splice(tmpList.indexOf(item), 1);
+    setItems(tmpList);
+  }
+
   // Functions to manage the item set.
   const itemHandlers: ItemHandlers = {
     getItems: () => items,
     setItems: setItems,
     deleteItem: deleteItem
+  }
+
+  const updateLocalStorage = () => {
+    localStorage.setItem("items", JSON.stringify(items));
   }
 
   return (
@@ -89,7 +113,7 @@ function App() {
           )}
         </div>
       </main>
-      <canvas id="sortingAnimation"></canvas>
+      <SideAnimation></SideAnimation>
     </>
   );
 }

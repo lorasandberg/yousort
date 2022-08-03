@@ -72,19 +72,23 @@ function Items(props: any) {
 
     return (
         <>
-            <div className="alignRight"><button className="onBlack" onClick={props.startSort}>Start sorting {props.getItems().length} items</button></div>
+            <div className="alignRight">
+                {props.getItems().length >= 2 && <button className="onBlack" onClick={props.startSort}>Start sorting {props.getItems().length} items</button> }
+                {props.getItems().length < 2 && <button className="onBlack">Add some items before sorting</button> }
+            </div>
             <div id="options">
                 <ItemForm handler={handleItemAddForm} getNewID={getNewID}></ItemForm>
                 {/*<Dropzone fileHandler={handleSetFile}></Dropzone>*/}
             </div>
             <div id="itemListOptions">
-                <input type="file" onChange={uploadJson} ref={loadField}></input>
+                <input type="file" onChange={uploadJson} ref={loadField} style={{ display: "none" }}></input>
                 <h1>Items</h1>
                 <div>
                     <button className="onBlack" onClick={downloadJSON}>Save</button>
                     <button className="onBlack" onClick={() => loadField.current!.click()}>Load</button>
                 </div>
             </div>
+            {props.getItems().length == 0 && <p style={{color:"#fff"}}>No items yet, start by adding some.</p>}
             {props.getItems().sort(orderByID).map((item: Item) => {
                 return (
                     <ItemElement key={item.id} item={item} deleteItem={props.deleteItem}></ItemElement>

@@ -5,6 +5,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Item } from '../components/item';
 import { isBreakStatement } from 'typescript';
 
+
+export function RandomRange(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min) + min);
+}
+
+
 function Sorter(props: any) {
 
   const [values, setValues] = useState<number[]>([]);
@@ -20,14 +26,13 @@ function Sorter(props: any) {
   const [editableTitle, setEditableTitle] = useState("better");
   const [starImage, setStarImage] = useState<HTMLImageElement | null>(null);
 
+  const [skipNewItemReroll, setSkipNewItemReroll] = useState(false);
+
   const imageSize = 100;
 
   // Init sorter
   useEffect(() => {
-    let newValues: number[] = [];
-    for (let i = 0; i < items().length; i++)
-      newValues.push(0);
-    setValues(newValues);
+    setValues(getInitialValues());
     setMatchups({});
     setSortingStates([]);
 
@@ -50,6 +55,13 @@ function Sorter(props: any) {
     if (!changed)
       changeTutorialText();
   }, [])
+
+  const getInitialValues = () => {
+    let newValues: number[] = [];
+    for (let i = 0; i < items().length; i++)
+      newValues.push(0);
+    return newValues;
+  }
 
   // Small animations that changes the header from "Which on is better" to "Which one is a more useful tip" 
   // Happens when the user doesn't remove the intial tips from the item list
@@ -81,6 +93,10 @@ function Sorter(props: any) {
   useEffect(() => {
     if (values.length == 0)
       return;
+    if(skipNewItemReroll) {
+      setSkipNewItemReroll(false);
+      return;
+    }
 
     newItems();
   }, [values]);
@@ -91,16 +107,16 @@ function Sorter(props: any) {
   }, [left, right]);
 
   // Update sorting values based on which item the player chose.
-  const choose = (id: number, other: number, skipped : boolean = false) => {
+  const choose = (id: number, other: number, skipped: boolean = false) => {
 
     // Set history
-    setSortingStates([...sortingStates,  { 
-        matchups: JSON.parse(JSON.stringify(matchups)),
-        values: JSON.parse(JSON.stringify(values)),
-        left: left, 
-        right: right,
-        skipped: skipped
-      }]);
+    setSortingStates([...sortingStates, {
+      matchups: JSON.parse(JSON.stringify(matchups)),
+      values: JSON.parse(JSON.stringify(values)),
+      left: left,
+      right: right,
+      skipped: skipped
+    }]);
 
     let newValues: number[] = [...values];
     newValues[id]++;
@@ -112,13 +128,34 @@ function Sorter(props: any) {
       newMUs[Math.min(id, other)] = {};
     newMUs[Math.min(id, other)][Math.max(id, other)] = id;
     setMatchups(newMUs);
-
   }
 
-  function RandomRange(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min) + min);
-  }
+  const undo = () => {
 
+    let i;
+
+    for (i = sortingStates.length - 1; i >= 0; i--) {
+      if (!sortingStates[i].skipped)
+        break;
+    }
+
+    // Reset sorting completely.
+    if (i < 0) {
+      setValues(getInitialValues());
+      setMatchups({});
+      setSortingStates([]);
+    }
+    else {
+      setValues(sortingStates[i].values);
+      setMatchups(sortingStates[i].matchups);
+      setRight(sortingStates[i].right);
+      setLeft(sortingStates[i].left);
+      
+      setSortingStates(sortingStates.slice(0, i));
+
+      setSkipNewItemReroll(true);
+    }
+  }
   // Get new items to compare
   function newItems() {
 
@@ -177,6 +214,7 @@ function Sorter(props: any) {
     }
   }
 
+
   // Voting finished, show results.
   const finish = () => {
     console.log("Finished!");
@@ -196,7 +234,6 @@ function Sorter(props: any) {
       return 0;
     });
 
-    console.log(list);
     let output: string = "";
     for (let i = 0; i < list.length; i++) {
       console.log((i + 1) + ": " + items()[list[i][0]].name);
@@ -217,7 +254,7 @@ function Sorter(props: any) {
     resultCanvas.current!.height = imageSize * list.length;
 
     // Make image background black
-    ctx!.fillStyle = "#fff";
+    ctx!.fillStyle = "#000";
     ctx!.fillRect(0, 0, resultCanvas.current!.width, resultCanvas.current!.height);
 
     ctx!.strokeStyle = "#000";
@@ -255,7 +292,7 @@ function Sorter(props: any) {
     else {
       let ratio = index / items().length;
       console.log(ratio);
-      ctx.fillStyle = "hsl(" + Math.round(ratio * 360 )+ ", 70%, 60%)";
+      ctx.fillStyle = "hsl(" + Math.round(ratio * 360) + ", 70%, 60%)";
       ctx!.fillRect(imageSize, y - imageSize / 2, 800 - imageSize, imageSize);
     }
 
@@ -280,11 +317,11 @@ function Sorter(props: any) {
 
     // Draw the name of the item
     let trimmed = name;
-    while(ctx.measureText(trimmed).width > 650)
+    while (ctx.measureText(trimmed).width > 650)
       trimmed = trimmed.substring(0, trimmed.length - 5);
 
-      if(trimmed.length < name.length)
-        trimmed = trimmed + "..."; 
+    if (trimmed.length < name.length)
+      trimmed = trimmed + "...";
 
     ctx!.font = "25px Chewy, sans-serif";
     ctx?.fillText(trimmed, imageSize + 20, y + 35, 650);
@@ -293,7 +330,7 @@ function Sorter(props: any) {
       // Draw the item image next to the name
       ctx?.drawImage(image, 0, imageSize * index, imageSize, imageSize);
     }
-    else{
+    else {
       // Draw the item image next to the name
       ctx?.drawImage(starImage as HTMLImageElement, 0, imageSize * index, imageSize, imageSize);
     }
@@ -322,16 +359,17 @@ function Sorter(props: any) {
         <h1 style={{ textAlign: "center", marginTop: "120px" }}>Which one is {editableTitle}?</h1>
         <div id="comparison">
           <div id="itemLeft" onClick={() => choose(left, right)}>
-            <h2>{items()[left]?.name}</h2>
             <img src={items()[left]?.image} />
+            <h2 style={{ fontSize: "1.2em", marginTop: "10px" }}>{items()[left]?.name}</h2>
             <p>{values[left]}</p>
           </div>
           <div id="itemLeft" onClick={() => choose(right, left)}>
-            <h2>{items()[right]?.name}</h2>
             <img src={items()[right]?.image} />
+            <h2 style={{ fontSize: "1.2em", marginTop: "10px" }}>{items()[right]?.name}</h2>
             <p>{values[right]}</p>
           </div>
         </div>
+        <button className="onBlack" onClick={undo}>Redo previous</button>
       </>)}
       {(isFinished && <>
         <h1 style={{ textAlign: "center", marginTop: "120px" }}>Your list is ready!</h1>

@@ -103,7 +103,8 @@ button.onWhite {
   background-color: #fff;
   height: 100vh;
   left: calc(50% + 500px);
-  width: 200px;
+  width: 300px;
+  top: 0;
 }
 
 button.onBlack + button.onBlack {
@@ -188,9 +189,9 @@ a {
 #itemLeft, #itemRight {
   border: 1px solid black;
   flex-grow: 1;
-  height: 500px;
   margin: 50px;
   width: 50%;
+  min-height: 400px;
 }
 
 #comparison img {
