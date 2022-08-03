@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/yousort/static/css/main.da899da0.css",
-    "main.js": "/yousort/static/js/main.c0e7d0f8.js",
+    "main.js": "/yousort/static/js/main.efdcb91c.js",
     "static/js/787.fedfcb6f.chunk.js": "/yousort/static/js/787.fedfcb6f.chunk.js",
     "static/media/RacingSansOne-Regular.ttf": "/yousort/static/media/RacingSansOne-Regular.c4f165be512469c89885.ttf",
     "index.html": "/yousort/index.html",
     "main.da899da0.css.map": "/yousort/static/css/main.da899da0.css.map",
-    "main.c0e7d0f8.js.map": "/yousort/static/js/main.c0e7d0f8.js.map",
+    "main.efdcb91c.js.map": "/yousort/static/js/main.efdcb91c.js.map",
     "787.fedfcb6f.chunk.js.map": "/yousort/static/js/787.fedfcb6f.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.da899da0.css",
-    "static/js/main.c0e7d0f8.js"
+    "static/js/main.efdcb91c.js"
   ]
 }
