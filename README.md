@@ -18,3 +18,5 @@ Tech used:
 Additionally, the app was created with backend as well but it was later dropped as clientside-only solution was preferred. Backend was fully functional and involved:
 - Node with Express
 - PostgreSQL database
+
+Finally, the site was designed with an experimental design constraint to use only #fff and #000 colors, so full black and white. 
