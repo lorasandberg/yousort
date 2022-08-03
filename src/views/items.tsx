@@ -57,13 +57,18 @@ function Items(props: any) {
 
     return (
         <>
+            <div className="alignRight"><button className="onBlack" onClick={props.startSort}>Start sorting {props.getItems().length} items</button></div>
             <div id="options">
                 <ItemForm handler={handleItemAddForm} getNewID={getNewID}></ItemForm>
-                <Dropzone fileHandler={handleSetFile}></Dropzone>
+                {/*<Dropzone fileHandler={handleSetFile}></Dropzone>*/}
             </div>
-
-            <h1>Items</h1>
-            <button onClick={downloadJSON}>Save</button>
+            <div id="itemListOptions">
+                <h1>Items</h1>
+                <div>
+                    <button className="onBlack" onClick={downloadJSON}>Save</button>
+                    <button className="onBlack" onClick={downloadJSON}>Load</button>
+                </div>
+            </div>
             {props.getItems().sort(orderByID).map((item: Item) => {
                 return (
                     <ItemElement key={item.id} item={item} deleteItem={props.deleteItem}></ItemElement>

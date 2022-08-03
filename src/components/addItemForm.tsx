@@ -1,5 +1,5 @@
 import { IncomingMessage } from "http";
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 function ItemForm(props : any) {
 
@@ -26,7 +26,8 @@ function ItemForm(props : any) {
     }, [dataUrl]);
 
     // Add item to the set.
-    const handleForm = () => { 
+    const handleForm = (event : any) => { 
+        event.preventDefault();
         props.handler(props.getNewID(), name, dataUrl);
         setName("");
         setDataUrl("");
@@ -72,11 +73,11 @@ function ItemForm(props : any) {
     
     return (
         <div className="formContainer">
-            <form ref={form} className="addItemForm">
+            <form ref={form} className="addItemForm" onSubmit={handleForm}>
             <input ref={imageFileField} type="file" name="image" className="hidden" onChange={setImage} />
                 <div className="imageContainer">
                     <label>Image</label>
-                    <div className="image" onClick={uploadImage} style={backgroundImage}></div>
+                    <div className="image" onClick={uploadImage} style={backgroundImage}><p style={{textAlign: "center", lineHeight: "100px"}}>{(dataUrl == "" && "Add image")}</p></div>
                 </div>
                 <div className="nameContainer">
                     <label htmlFor="name">Name</label>
@@ -84,7 +85,7 @@ function ItemForm(props : any) {
                 </div>
             </form>
             <div className="addItem">
-                <input type="button" value="Add Item" onClick={handleForm} />
+                <button onClick={handleForm} className="onBlack addItemButton">Add Item</button>
                 <canvas ref={canvas} className="hidden" width={RESIZED_IMAGE_SIZE} height={RESIZED_IMAGE_SIZE}></canvas>
             </div>
         </div>

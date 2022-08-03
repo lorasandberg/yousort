@@ -14,7 +14,7 @@ export function ItemElement(props: any) {
         <div className="image" style={imageStyle}></div>
         <p>{props.item.name}</p>
         <div>
-            <button onClick={() => props.deleteItem(props.item)}>Delete</button>
+            <button className="onWhite" onClick={() => props.deleteItem(props.item)}>Delete</button>
         </div>
     </div>);
 }

@@ -1,7 +1,9 @@
 import React from 'react';
 import '../App.css';
+import star from "../images/star.png";
 import { useState, useEffect, useRef } from 'react';
 import { Item } from '../components/item';
+import { isBreakStatement } from 'typescript';
 
 function Sorter(props: any) {
 
@@ -10,10 +12,15 @@ function Sorter(props: any) {
   const [right, setRight] = useState<number>(1);
   const [matchups, setMatchups] = useState<any>({});
   const [isFinished, setIsFinished] = useState<boolean>(false);
+  const [sortingStates, setSortingStates] = useState<any>([]);
 
   const items = (): Item[] => props.getItems();
 
   const resultCanvas = useRef<HTMLCanvasElement>(null);
+  const [editableTitle, setEditableTitle] = useState("better");
+  const [starImage, setStarImage] = useState<HTMLImageElement | null>(null);
+
+  const imageSize = 100;
 
   // Init sorter
   useEffect(() => {
@@ -22,7 +29,53 @@ function Sorter(props: any) {
       newValues.push(0);
     setValues(newValues);
     setMatchups({});
+    setSortingStates([]);
+
+    // Load a default picture for when user has not set one.
+    let image = new Image();
+    image.onload = () => {
+      setStarImage(image);
+    }
+    image.src = star;
+
+    // Check if user changed any items from the initial tutorial
+    let changed: boolean = false;
+
+    for (let i = 0; i < items().length; i++)
+      if (items()[i].id >= 0) {
+        changed = true;
+        break;
+      }
+
+    if (!changed)
+      changeTutorialText();
   }, [])
+
+  // Small animations that changes the header from "Which on is better" to "Which one is a more useful tip" 
+  // Happens when the user doesn't remove the intial tips from the item list
+  const changeTutorialText = async () => {
+
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+    let old = editableTitle;
+    let len = old.length;
+
+    await delay(3000);
+
+    for (let i = 0; i < len; i++) {
+      old = old.slice(0, -1);
+      setEditableTitle(old);
+      await delay(50);
+    }
+
+    const title = "a more useful tip";
+    let newTitle = "";
+
+    for (let i = 0; i < title.length; i++) {
+      await delay(50);
+      newTitle += title[i];
+      setEditableTitle(newTitle);
+    }
+  }
 
   // Whenever the sorting values change, fetch new items to compare.
   useEffect(() => {
@@ -38,7 +91,17 @@ function Sorter(props: any) {
   }, [left, right]);
 
   // Update sorting values based on which item the player chose.
-  const choose = (id: number, other: number) => {
+  const choose = (id: number, other: number, skipped : boolean = false) => {
+
+    // Set history
+    setSortingStates([...sortingStates,  { 
+        matchups: JSON.parse(JSON.stringify(matchups)),
+        values: JSON.parse(JSON.stringify(values)),
+        left: left, 
+        right: right,
+        skipped: skipped
+      }]);
+
     let newValues: number[] = [...values];
     newValues[id]++;
     setValues(newValues);
@@ -49,6 +112,7 @@ function Sorter(props: any) {
       newMUs[Math.min(id, other)] = {};
     newMUs[Math.min(id, other)][Math.max(id, other)] = id;
     setMatchups(newMUs);
+
   }
 
   function RandomRange(min: number, max: number) {
@@ -105,13 +169,11 @@ function Sorter(props: any) {
   const checkMatchups = () => {
     let bigger = Math.max(left, right);
     let smaller = Math.min(left, right);
-    console.log("Checking matchups: " + bigger + " vs. " + smaller);
 
     if (matchups[smaller] != undefined && matchups[smaller][bigger] !== undefined) {
       let winner = matchups[smaller][bigger];
       let loser = left == winner ? right : left;
-      console.log("Skipping matchups: " + winner + " wins over " + loser);
-      choose(winner, loser);
+      choose(winner, loser, true);
     }
   }
 
@@ -148,15 +210,14 @@ function Sorter(props: any) {
   }
 
   // Create a fancy image to show the results and allow users to save them.
-  const generateResultImage = (list : number[][]) => {
-    const imageSize = 100;
+  const generateResultImage = (list: number[][]) => {
 
     const ctx = resultCanvas.current!.getContext("2d");
     resultCanvas.current!.width = 800;
     resultCanvas.current!.height = imageSize * list.length;
 
     // Make image background black
-    ctx!.fillStyle = "#000";
+    ctx!.fillStyle = "#fff";
     ctx!.fillRect(0, 0, resultCanvas.current!.width, resultCanvas.current!.height);
 
     ctx!.strokeStyle = "#000";
@@ -164,39 +225,79 @@ function Sorter(props: any) {
     // For each list entry
     for (let i = 0; i < list.length; i++) {
 
-      // Download the item image as file
-      let image = new Image();
-      image.onload = () => {
+      let item = items()[list[i][0]];
 
-        const y = imageSize * i + imageSize / 2;
-
-        // Draw the item image zoomed in an blurred in the background of the entry
-        ctx!.filter = "blur(4px)";
-        ctx!.drawImage(image, 0, image.height / 2 - 20, image.width, 40, imageSize, y - imageSize / 2, 800 - imageSize, imageSize);
-        ctx!.filter = "none";
-
-        // Draw black background for the text
-        ctx!.fillStyle = "#000";
-        ctx!.fillRect(0, y + 10, 800, 40);
-
-        ctx!.lineWidth = 3;
-        ctx!.fillStyle = "#fff";
-
-        // Draw the placing of the item in the list
-        ctx!.font = "32px Chewy, sans-serif";
-        ctx?.strokeText(ordinal_suffix_of(i + 1), imageSize + 20 + 600 - 2, y - 7); // Outside stroke
-        ctx!.font = "30px Chewy, sans-serif";
-        ctx?.fillText(ordinal_suffix_of(i + 1), imageSize + 20 + 600, y - 7);
-
-        // Draw the name of the item
-        ctx!.font = "25px Chewy, sans-serif";
-        ctx?.fillText(items()[list[i][0]].name, imageSize + 20, y + 25);
-
-        // Draw the item image next to the name
-        ctx?.drawImage(image, 0, imageSize * i, imageSize, imageSize);
+      if (item.image !== null && item.image !== "") {
+        // Download the item image as file
+        let image = new Image();
+        image.onload = () => {
+          drawEntry(ctx!, item.name, i, image);
+        }
+        image.src = item.image;
       }
-      image.src = items()[list[i][0]].image;
+      else
+        drawEntry(ctx!, item.name, i, null);
+
     }
+  }
+
+  function drawEntry(ctx: CanvasRenderingContext2D, name: string, index: number, image: HTMLImageElement | null) {
+
+    const y = imageSize * index + imageSize / 2;
+
+    // Draw the item image zoomed in an blurred in the background of the entry
+
+    if (image !== null) {
+      ctx!.filter = "blur(4px)";
+      ctx!.drawImage(image, 0, image.height / 2 - 20, image.width, 40, imageSize, y - imageSize / 2, 800 - imageSize, imageSize);
+      ctx!.filter = "none";
+    }
+    else {
+      let ratio = index / items().length;
+      console.log(ratio);
+      ctx.fillStyle = "hsl(" + Math.round(ratio * 360 )+ ", 70%, 60%)";
+      ctx!.fillRect(imageSize, y - imageSize / 2, 800 - imageSize, imageSize);
+    }
+
+    // Draw black background for the text
+    ctx!.fillStyle = "#000";
+    ctx!.fillRect(0, y + 10, 800, 40);
+
+    ctx.beginPath();
+    ctx.arc(imageSize + 22, y - 5, 30, 0, 2 * Math.PI, true);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx!.lineWidth = 3;
+    ctx!.fillStyle = "#fff";
+    // Draw the placing of the item in the list
+    //ctx!.font = "32px Chewy, sans-serif";
+    //ctx?.strokeText(ordinal_suffix_of(index + 1), imageSize + 20 + 600 - 2, y - 7); // Outside stroke
+
+    let placing = (index + 1) + "";
+    ctx!.font = "20px Chewy, sans-serif";
+    ctx?.fillText(placing, imageSize + 22 - Math.min(ctx.measureText(placing).width, 30) / 2, y - 3, 30);
+
+    // Draw the name of the item
+    let trimmed = name;
+    while(ctx.measureText(trimmed).width > 650)
+      trimmed = trimmed.substring(0, trimmed.length - 5);
+
+      if(trimmed.length < name.length)
+        trimmed = trimmed + "..."; 
+
+    ctx!.font = "25px Chewy, sans-serif";
+    ctx?.fillText(trimmed, imageSize + 20, y + 35, 650);
+
+    if (image !== null) {
+      // Draw the item image next to the name
+      ctx?.drawImage(image, 0, imageSize * index, imageSize, imageSize);
+    }
+    else{
+      // Draw the item image next to the name
+      ctx?.drawImage(starImage as HTMLImageElement, 0, imageSize * index, imageSize, imageSize);
+    }
+
   }
 
   // ie. 1 -> "1st", 2 -> "2nd"
@@ -217,21 +318,25 @@ function Sorter(props: any) {
 
   return (
     <>
-      {(!isFinished && <div id="comparison">
-        <div id="itemLeft" onClick={() => choose(left, right)}>
-          <h2>{items()[left]?.name}</h2>
-          <img src={items()[left]?.image} />
-          <p>{values[left]}</p>
+      {(!isFinished && <>
+        <h1 style={{ textAlign: "center", marginTop: "120px" }}>Which one is {editableTitle}?</h1>
+        <div id="comparison">
+          <div id="itemLeft" onClick={() => choose(left, right)}>
+            <h2>{items()[left]?.name}</h2>
+            <img src={items()[left]?.image} />
+            <p>{values[left]}</p>
+          </div>
+          <div id="itemLeft" onClick={() => choose(right, left)}>
+            <h2>{items()[right]?.name}</h2>
+            <img src={items()[right]?.image} />
+            <p>{values[right]}</p>
+          </div>
         </div>
-        <div id="itemLeft" onClick={() => choose(right, left)}>
-          <h2>{items()[right]?.name}</h2>
-          <img src={items()[right]?.image} />
-          <p>{values[right]}</p>
-        </div>
-      </div>)}
+      </>)}
       {(isFinished && <>
-        <canvas ref={resultCanvas}></canvas>
-        <button onClick={finish}>Finish</button>
+        <h1 style={{ textAlign: "center", marginTop: "120px" }}>Your list is ready!</h1>
+        <canvas style={{ maxWidth: "100%", marginTop: "120px" }} ref={resultCanvas}></canvas>
+        <p><button className="onBlack" onClick={props.viewItems}>Back to items</button></p>
       </>
       )}
     </>
